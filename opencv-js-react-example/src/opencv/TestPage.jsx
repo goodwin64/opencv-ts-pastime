@@ -1,6 +1,5 @@
 import React from "react";
 import cv from "@techstark/opencv-js";
-import { loadHaarFaceModels, detectHaarFace } from "./haarFaceDetection";
 import "./style.css";
 
 window.cv = cv;
@@ -9,16 +8,20 @@ class TestPage extends React.Component {
   constructor(props) {
     super(props);
     this.inputImgRef = React.createRef();
-    this.grayImgRef = React.createRef();
-    this.cannyEdgeRef = React.createRef();
-    this.haarFaceImgRef = React.createRef();
+    this.resultImageRef = React.createRef();
     this.state = {
-      imgUrl: null,
+      // if we want to load by URL from the beginning - specify the URL here;
+      // otherwise, pick an image using file input
+      imgUrl: "",
     };
   }
 
-  componentDidMount() {
-    loadHaarFaceModels();
+  waitForOpenCvLoaded() {
+    return new Promise((resolve) => {
+      cv["onRuntimeInitialized"] = () => {
+        return resolve();
+      };
+    });
   }
 
   /////////////////////////////////////////
@@ -27,27 +30,67 @@ class TestPage extends React.Component {
   //
   /////////////////////////////////////////
   processImage(imgSrc) {
-    const img = cv.imread(imgSrc);
+    const imgSource = cv.imread(imgSrc);
 
-    // to gray scale
-    const imgGray = new cv.Mat();
-    cv.cvtColor(img, imgGray, cv.COLOR_BGR2GRAY);
-    cv.imshow(this.grayImgRef.current, imgGray);
+    // Convert the image to grayscale
+    let gray = new cv.Mat();
+    cv.cvtColor(imgSource, gray, cv.COLOR_RGBA2GRAY);
+    this.showImage("gray", gray);
 
-    // detect edges using Canny
-    const edges = new cv.Mat();
-    cv.Canny(imgGray, edges, 100, 100);
-    cv.imshow(this.cannyEdgeRef.current, edges);
+    // Apply threshold to create a binary image
+    let thresholded = new cv.Mat();
+    cv.threshold(gray, thresholded, 235, 255, cv.THRESH_BINARY);
+    this.showImage("thresholded", thresholded);
 
-    // detect faces using Haar-cascade Detection
-    const haarFaces = detectHaarFace(img);
-    cv.imshow(this.haarFaceImgRef.current, haarFaces);
+    // Define a kernel for morphological operations
+    let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
+
+    // Perform morphological opening (erosion followed by dilation)
+    let opened = new cv.Mat();
+    cv.morphologyEx(thresholded, opened, cv.MORPH_OPEN, kernel);
+    this.showImage("opened", opened);
+
+    // Find the difference between the opened image and the original thresholded image
+    let difference = new cv.Mat();
+    cv.absdiff(opened, thresholded, difference);
+    this.showImage("difference", difference);
+
+    // Create a mask where non-zero pixels indicate noise
+    let noiseMask = new cv.Mat();
+    cv.threshold(difference, noiseMask, 1, 255, cv.THRESH_BINARY);
+    this.showImage("noiseMask", noiseMask);
+
+    // Remove noise by applying the mask to the original image
+    let result = new cv.Mat();
+    imgSource.copyTo(result, noiseMask);
+
+    // render result image
+    this.showImage("result", result);
 
     // need to release them manually
-    img.delete();
-    imgGray.delete();
-    edges.delete();
-    haarFaces.delete();
+    [
+      imgSource,
+      gray,
+      thresholded,
+      opened,
+      difference,
+      noiseMask,
+      result,
+    ].forEach((mat) => mat.delete());
+  }
+
+  showImage(imageId, openCvImage) {
+    const container = document.querySelector(".images-container");
+    const wrapper = document.createElement("div");
+    wrapper.className = "image-card";
+    const title = document.createElement("div");
+    title.innerText = imageId;
+    wrapper.appendChild(title);
+    const canvas = document.createElement("canvas");
+    canvas.id = imageId;
+    cv.imshow(canvas, openCvImage);
+    wrapper.appendChild(canvas);
+    container.appendChild(wrapper);
   }
 
   render() {
@@ -73,31 +116,21 @@ class TestPage extends React.Component {
         {imgUrl && (
           <div className="images-container">
             <div className="image-card">
-              <div style={{ margin: "10px" }}>↓↓↓ The original image ↓↓↓</div>
+              <div>↓↓↓ The original image ↓↓↓</div>
               <img
                 alt="Original input"
                 src={imgUrl}
+                crossOrigin="anonymous"
                 onLoad={(e) => {
-                  this.processImage(e.target);
+                  try {
+                    this.waitForOpenCvLoaded().then(() => {
+                      this.processImage(e.target);
+                    });
+                  } catch (error) {
+                    console.error(error);
+                  }
                 }}
               />
-            </div>
-
-            <div className="image-card">
-              <div style={{ margin: "10px" }}>↓↓↓ The gray scale image ↓↓↓</div>
-              <canvas ref={this.grayImgRef} />
-            </div>
-
-            <div className="image-card">
-              <div style={{ margin: "10px" }}>↓↓↓ Canny Edge Result ↓↓↓</div>
-              <canvas ref={this.cannyEdgeRef} />
-            </div>
-
-            <div className="image-card">
-              <div style={{ margin: "10px" }}>
-                ↓↓↓ Haar-cascade Face Detection Result ↓↓↓
-              </div>
-              <canvas ref={this.haarFaceImgRef} />
             </div>
           </div>
         )}
