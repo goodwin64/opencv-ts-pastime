@@ -12,6 +12,7 @@ class TestPage extends React.Component {
     this.state = {
       // if we want to load by URL from the beginning - specify the URL here;
       // otherwise, pick an image using file input
+      // captcha example: https://i.imgur.com/a02Kkaq.jpg
       imgUrl: "",
     };
   }
