@@ -37,45 +37,58 @@ class TestPage extends React.Component {
     cv.cvtColor(imgSource, gray, cv.COLOR_RGBA2GRAY);
     this.showImage("gray", gray);
 
-    // Apply threshold to create a binary image
-    let thresholded = new cv.Mat();
-    cv.threshold(gray, thresholded, 235, 255, cv.THRESH_BINARY);
-    this.showImage("thresholded", thresholded);
+    // Apply Canny edge detection to the grayscale image
+    let edges = new cv.Mat();
+    cv.Canny(gray, edges, 50, 150);
+    this.showImage("edges", edges);
 
-    // Define a kernel for morphological operations
+    // Create a kernel for morphological operations
     let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
 
-    // Perform morphological opening (erosion followed by dilation)
-    let opened = new cv.Mat();
-    cv.morphologyEx(thresholded, opened, cv.MORPH_OPEN, kernel);
-    this.showImage("opened", opened);
+    // Dilate the edges to make the lines thicker
+    let dilatedEdges = new cv.Mat();
+    cv.dilate(edges, dilatedEdges, kernel);
+    this.showImage("dilatedEdges", dilatedEdges);
 
-    // Find the difference between the opened image and the original thresholded image
-    let difference = new cv.Mat();
-    cv.absdiff(opened, thresholded, difference);
-    this.showImage("difference", difference);
+    // Find contours in the dilated edges
+    let contours = new cv.MatVector();
+    cv.findContours(
+      dilatedEdges,
+      contours,
+      new cv.Mat(),
+      cv.RETR_TREE,
+      cv.CHAIN_APPROX_SIMPLE
+    );
 
-    // Create a mask where non-zero pixels indicate noise
-    let noiseMask = new cv.Mat();
-    cv.threshold(difference, noiseMask, 1, 255, cv.THRESH_BINARY);
-    this.showImage("noiseMask", noiseMask);
+    // Create a black image to draw the vectorized lines
+    let vectorized = new cv.Mat.zeros(
+      imgSource.rows,
+      imgSource.cols,
+      cv.CV_8UC3
+    );
 
-    // Remove noise by applying the mask to the original image
-    let result = new cv.Mat();
-    imgSource.copyTo(result, noiseMask);
+    // Draw the contours on the vectorized image
+    let color = new cv.Scalar(255, 255, 255); // White color
+    for (let i = 0; i < contours.size(); i++) {
+      cv.drawContours(vectorized, contours, i, color, 2); // Draw with a thickness of 2
+    }
+    this.showImage("vectorized", vectorized);
 
-    // render result image
-    this.showImage("result", result);
+    // Invert the colors
+    let inverted = new cv.Mat();
+    cv.bitwise_not(vectorized, inverted);
+    this.showImage("inverted", inverted);
 
     // need to release them manually
     [
       imgSource,
       gray,
-      thresholded,
-      opened,
-      difference,
-      noiseMask,
-      result,
+      edges,
+      kernel,
+      dilatedEdges,
+      contours,
+      vectorized,
+      inverted,
     ].forEach((mat) => mat.delete());
   }
 
