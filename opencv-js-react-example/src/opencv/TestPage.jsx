@@ -13,7 +13,7 @@ class TestPage extends React.Component {
       // if we want to load by URL from the beginning - specify the URL here;
       // otherwise, pick an image using file input
       // captcha example: https://i.imgur.com/a02Kkaq.jpg
-      imgUrl: "",
+      imgUrl: "https://i.imgur.com/8WGknKk.png",
     };
   }
 
@@ -35,8 +35,47 @@ class TestPage extends React.Component {
 
     // Convert the image to grayscale
     let gray = new cv.Mat();
-    cv.cvtColor(imgSource, gray, cv.COLOR_RGBA2GRAY);
+    cv.cvtColor(imgSource, gray, cv.COLOR_BGR2GRAY);
     this.showImage("gray", gray);
+
+    let flt = new cv.Mat();
+    cv.adaptiveThreshold(
+      gray,
+      flt,
+      100,
+      cv.ADAPTIVE_THRESH_MEAN_C,
+      cv.THRESH_BINARY,
+      13,
+      16
+    );
+    this.showImage("flt", flt);
+
+    let krn = cv.Mat.ones(3, 3, cv.CV_8U);
+    let opn = new cv.Mat();
+    cv.morphologyEx(flt, opn, cv.MORPH_OPEN, krn);
+    this.showImage("opn", opn);
+
+    let cls = new cv.Mat();
+    cv.morphologyEx(opn, cls, cv.MORPH_CLOSE, krn);
+    this.showImage("cls", cls);
+
+    let curves = new cv.Mat();
+    cv.bitwise_or(cls, gray, curves);
+    this.showImage("curves", curves);
+
+    let mask = new cv.Mat();
+    cv.threshold(curves, mask, 235, 255, cv.THRESH_BINARY);
+
+    // Invert the mask to keep the regions you want to remove
+    let invertedMask = new cv.Mat();
+    cv.bitwise_not(mask, invertedMask);
+    this.showImage("invertedMask", invertedMask);
+
+    // Apply the inverted mask to the source image to remove unwanted regions
+    let curveRemoved = new cv.Mat();
+    // TODO: fix, bitwise_and should be used in another way
+    cv.bitwise_and(gray, curves, curveRemoved, invertedMask);
+    this.showImage("curveRemoved", curveRemoved);
 
     // Apply Canny edge detection to the grayscale image
     let edges = new cv.Mat();
