@@ -50,37 +50,67 @@ class TestPage extends React.Component {
     );
     this.showImage("flt", flt);
 
-    let krn = cv.Mat.ones(3, 3, cv.CV_8U);
+    let kernel3 = cv.Mat.ones(3, 3, cv.CV_8U);
     let opn = new cv.Mat();
-    cv.morphologyEx(flt, opn, cv.MORPH_OPEN, krn);
+    cv.morphologyEx(flt, opn, cv.MORPH_OPEN, kernel3);
     this.showImage("opn", opn);
 
     let cls = new cv.Mat();
-    cv.morphologyEx(opn, cls, cv.MORPH_CLOSE, krn);
+    cv.morphologyEx(opn, cls, cv.MORPH_CLOSE, kernel3);
     this.showImage("cls", cls);
 
     let curves = new cv.Mat();
     cv.bitwise_or(cls, gray, curves);
     this.showImage("curves", curves);
 
-    let mask = new cv.Mat();
-    cv.threshold(curves, mask, 235, 255, cv.THRESH_BINARY);
+    let curvesMask = new cv.Mat();
+    cv.threshold(curves, curvesMask, 200, 255, cv.THRESH_BINARY);
+    // cv.erode(
+    //   curvesMask,
+    //   curvesMask,
+    //   cv.Mat.ones(3, 3, cv.CV_8U),
+    //   {
+    //     x: -1,
+    //     y: -1,
+    //   },
+    //   1,
+    //   cv.BORDER_CONSTANT
+    // );
+    this.showImage("curvesMask", curvesMask);
 
-    // Invert the mask to keep the regions you want to remove
-    let invertedMask = new cv.Mat();
-    cv.bitwise_not(mask, invertedMask);
-    this.showImage("invertedMask", invertedMask);
+    // Invert the curvesMask to keep the regions you want to remove
+    let invertedCurvesMask = new cv.Mat();
+    cv.bitwise_not(curvesMask, invertedCurvesMask);
+    this.showImage("invertedMask", invertedCurvesMask);
 
-    // Apply the inverted mask to the source image to remove unwanted regions
-    let curveRemoved = new cv.Mat();
+    // Apply the inverted curvesMask to the source image to remove unwanted regions
+    let curvesRemoved = new cv.Mat();
     // TODO: fix, bitwise_and should be used in another way
-    cv.bitwise_and(gray, curves, curveRemoved, invertedMask);
-    this.showImage("curveRemoved", curveRemoved);
+    cv.bitwise_not(gray, curvesRemoved, curvesMask);
+    this.showImage("curvesRemoved", curvesRemoved);
 
+    let curvesRemovedInverted = new cv.Mat();
+    cv.bitwise_not(curvesRemoved, curvesRemovedInverted);
+    this.showImage("curvesRemovedInverted", curvesRemovedInverted);
+
+    // Create a black image to draw the vectorized lines
+    let vectorized = this.vectorizeImage(imgSource);
+    this.showImage("vectorized", vectorized);
+
+    // Invert the colors
+    let inverted = new cv.Mat();
+    cv.bitwise_not(vectorized, inverted);
+    this.showImage("inverted", inverted);
+
+    // need to release them manually
+    [imgSource, gray, vectorized, inverted].forEach((mat) => mat.delete());
+  }
+
+  vectorizeImage(mat) {
     // Apply Canny edge detection to the grayscale image
     let edges = new cv.Mat();
-    cv.Canny(gray, edges, 50, 150);
-    this.showImage("edges", edges);
+    // cv.Canny(gray, edges, 50, 150);
+    cv.Canny(mat, edges, 50, 150);
 
     // Create a kernel for morphological operations
     let kernel = cv.Mat.ones(3, 3, cv.CV_8U);
@@ -88,7 +118,6 @@ class TestPage extends React.Component {
     // Dilate the edges to make the lines thicker
     let dilatedEdges = new cv.Mat();
     cv.dilate(edges, dilatedEdges, kernel);
-    this.showImage("dilatedEdges", dilatedEdges);
 
     // Find contours in the dilated edges
     let contours = new cv.MatVector();
@@ -101,35 +130,14 @@ class TestPage extends React.Component {
     );
 
     // Create a black image to draw the vectorized lines
-    let vectorized = new cv.Mat.zeros(
-      imgSource.rows,
-      imgSource.cols,
-      cv.CV_8UC3
-    );
+    let vectorized = new cv.Mat.zeros(mat.rows, mat.cols, cv.CV_8UC3);
 
     // Draw the contours on the vectorized image
     let color = new cv.Scalar(255, 255, 255); // White color
     for (let i = 0; i < contours.size(); i++) {
       cv.drawContours(vectorized, contours, i, color, 2); // Draw with a thickness of 2
     }
-    this.showImage("vectorized", vectorized);
-
-    // Invert the colors
-    let inverted = new cv.Mat();
-    cv.bitwise_not(vectorized, inverted);
-    this.showImage("inverted", inverted);
-
-    // need to release them manually
-    [
-      imgSource,
-      gray,
-      edges,
-      kernel,
-      dilatedEdges,
-      contours,
-      vectorized,
-      inverted,
-    ].forEach((mat) => mat.delete());
+    return vectorized;
   }
 
   showImage(imageId, openCvImage) {
