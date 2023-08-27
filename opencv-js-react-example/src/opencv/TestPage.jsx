@@ -25,7 +25,7 @@ class TestPage extends React.Component {
       // if we want to load by URL from the beginning - specify the URL here;
       // otherwise, pick an image using file input
       // captcha example: https://i.imgur.com/a02Kkaq.jpg
-      imgUrl: "https://i.imgur.com/8WGknKk.png",
+      imgUrl: "https://i.imgur.com/rEppR08.jpg",
     };
   }
 
@@ -120,8 +120,9 @@ class TestPage extends React.Component {
   }
 
   async matchCaptchaByLettersTemplate(captcha) {
-    let srcElement = document.getElementById("windows-src");
-    let templateElement = document.getElementById("windows-template");
+    let srcElement = document.getElementById("original-captcha");
+    let char = "s";
+    let templateElement = document.getElementById(`char-${char}`);
     let srcMat = cv.imread(srcElement, cv.IMREAD_GRAYSCALE);
     let template = cv.imread(templateElement, cv.IMREAD_GRAYSCALE);
     let destImg = new cv.Mat();
@@ -244,6 +245,7 @@ class TestPage extends React.Component {
               <div>↓↓↓ The original image ↓↓↓</div>
               <img
                 alt="Original input"
+                id="original-captcha"
                 src={imgUrl}
                 crossOrigin="anonymous"
                 onLoad={(e) => {
