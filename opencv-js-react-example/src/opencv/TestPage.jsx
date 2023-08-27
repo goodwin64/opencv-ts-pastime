@@ -4,6 +4,18 @@ import "./style.css";
 
 window.cv = cv;
 
+const charToImageUrl = {
+  2: "https://i.imgur.com/NvzJWJ9.png",
+  a: "https://i.imgur.com/zFZSq8h.png",
+  e: "https://i.imgur.com/PYMCVqS.png",
+  h: "https://i.imgur.com/jBexQby.png",
+  s: "https://i.imgur.com/EJpiDbL.png",
+  z: "https://i.imgur.com/zti5smS.png",
+};
+const availableChars = Object.keys(charToImageUrl);
+
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
 class TestPage extends React.Component {
   constructor(props) {
     super(props);
@@ -30,7 +42,7 @@ class TestPage extends React.Component {
   // process image with opencv.js
   //
   /////////////////////////////////////////
-  processImage(imgSrc) {
+  async processImage(imgSrc) {
     const imgSource = cv.imread(imgSrc);
 
     // Convert the image to grayscale
@@ -102,8 +114,39 @@ class TestPage extends React.Component {
     cv.bitwise_not(vectorized, inverted);
     this.showImage("inverted", inverted);
 
+    await this.matchCaptchaByLettersTemplate(gray);
     // need to release them manually
     [imgSource, gray, vectorized, inverted].forEach((mat) => mat.delete());
+  }
+
+  async matchCaptchaByLettersTemplate(captcha) {
+    let srcElement = document.getElementById("windows-src");
+    let templateElement = document.getElementById("windows-template");
+    let srcMat = cv.imread(srcElement, cv.IMREAD_GRAYSCALE);
+    let template = cv.imread(templateElement, cv.IMREAD_GRAYSCALE);
+    let destImg = new cv.Mat();
+    let mask = new cv.Mat();
+    // Perform template matching
+    cv.matchTemplate(srcMat, template, destImg, cv.TM_CCOEFF_NORMED);
+    // Get the location of the maximum value in the result matrix (top-left corner of detected area)
+    let result = cv.minMaxLoc(destImg, mask);
+    let maxPoint = result.maxLoc;
+    // Draw a rectangle around the matched area
+    let color = new cv.Scalar(255, 0, 0, 255);
+    let point2 = new cv.Point(
+      maxPoint.x + template.cols,
+      maxPoint.y + template.rows
+    );
+    console.log(">>> debug", template.cols, template.rows, {
+      result,
+      maxPoint,
+      color,
+      point2,
+    });
+    cv.rectangle(srcMat, maxPoint, point2, color, 2, cv.LINE_8, 0);
+    // Display the result
+    this.showImage("Recognized Characters", destImg);
+    this.showImage("With rectangle", srcMat);
   }
 
   vectorizeImage(mat) {
@@ -174,6 +217,27 @@ class TestPage extends React.Component {
           />
         </div>
 
+        <img
+          id="windows-src"
+          src="https://i.imgur.com/DdJeZkP.png"
+          crossOrigin="anonymous"
+        />
+        <img
+          id="windows-template"
+          src="https://i.imgur.com/lUGPQwc.png"
+          crossOrigin="anonymous"
+        />
+
+        {availableChars.map((char) => (
+          <img
+            key={char}
+            alt={char}
+            id={`char-${char}`}
+            src={charToImageUrl[char]}
+            crossOrigin="anonymous"
+          />
+        ))}
+
         {imgUrl && (
           <div className="images-container">
             <div className="image-card">
@@ -185,7 +249,7 @@ class TestPage extends React.Component {
                 onLoad={(e) => {
                   try {
                     this.waitForOpenCvLoaded().then(() => {
-                      this.processImage(e.target);
+                      void this.processImage(e.target);
                     });
                   } catch (error) {
                     console.error(error);
