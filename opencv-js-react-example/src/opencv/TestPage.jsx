@@ -218,17 +218,6 @@ class TestPage extends React.Component {
           />
         </div>
 
-        <img
-          id="windows-src"
-          src="https://i.imgur.com/DdJeZkP.png"
-          crossOrigin="anonymous"
-        />
-        <img
-          id="windows-template"
-          src="https://i.imgur.com/lUGPQwc.png"
-          crossOrigin="anonymous"
-        />
-
         {availableChars.map((char) => (
           <img
             key={char}
