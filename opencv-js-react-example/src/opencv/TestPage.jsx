@@ -62,6 +62,12 @@ class TestPage extends React.Component {
     });
   }
 
+  // clear existing images when processing new
+  clearExistingImages() {
+    const container = document.querySelector(".images-container");
+    container.innerHTML = "";
+  }
+
   /////////////////////////////////////////
   //
   // process image with opencv.js
@@ -69,6 +75,7 @@ class TestPage extends React.Component {
   /////////////////////////////////////////
   async processImage(imgSrc) {
     await this.waitForOpenCvLoaded();
+    this.clearExistingImages();
     const imgSource = cv.imread(imgSrc);
 
     // Convert the image to grayscale
