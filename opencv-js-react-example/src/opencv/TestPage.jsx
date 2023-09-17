@@ -5,11 +5,30 @@ import "./style.css";
 window.cv = cv;
 
 const charToImageUrl = {
+  1: "https://i.imgur.com/Mcd6Bd6.png",
   2: "https://i.imgur.com/NvzJWJ9.png",
+  3: "https://i.imgur.com/sbrgBIu.png",
+  4: "https://i.imgur.com/CLE01CM.png",
+  5: "https://i.imgur.com/Yn9RZ9B.png",
+  6: "https://i.imgur.com/czsFuzu.png",
+  7: "https://i.imgur.com/mGIXtm2.png",
+  8: "https://i.imgur.com/48jj7oi.png",
+  9: "https://i.imgur.com/u2qjTHi.png",
   a: "https://i.imgur.com/zFZSq8h.png",
+  c: "https://i.imgur.com/sKs0EC1.png",
+  d: "https://i.imgur.com/wp14bEi.png",
   e: "https://i.imgur.com/PYMCVqS.png",
+  g: "https://i.imgur.com/3PZbU3u.png",
   h: "https://i.imgur.com/jBexQby.png",
+  k: "https://i.imgur.com/UyNsjRI.png",
+  n: "https://i.imgur.com/xj9o2mD.png",
+  p: "https://i.imgur.com/6RR9Dz9.png",
+  q: "https://i.imgur.com/QgNM842.png",
   s: "https://i.imgur.com/EJpiDbL.png",
+  u: "https://i.imgur.com/kxTIG6s.png",
+  v: "https://i.imgur.com/FdLk1Xe.png",
+  x: "https://i.imgur.com/c700HSh.png",
+  y: "https://i.imgur.com/eLUpSd6.png",
   z: "https://i.imgur.com/zti5smS.png",
 };
 const availableChars = Object.keys(charToImageUrl);
