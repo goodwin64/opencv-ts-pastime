@@ -147,14 +147,16 @@ class TestPage extends React.Component {
     cv.bitwise_not(vectorized, inverted);
     this.showImage("inverted", inverted);
 
-    await this.matchCaptchaByLettersTemplate(gray);
+    for (let char of availableChars) {
+      await this.matchCaptchaByLettersTemplate(gray, char);
+    }
+
     // need to release them manually
     [imgSource, gray, vectorized, inverted].forEach((mat) => mat.delete());
   }
 
-  async matchCaptchaByLettersTemplate(captcha) {
+  async matchCaptchaByLettersTemplate(captcha, char) {
     let srcElement = document.getElementById("original-captcha");
-    let char = "s";
     let templateElement = document.getElementById(`char-${char}`);
     let srcMat = cv.imread(srcElement, cv.IMREAD_GRAYSCALE);
     let template = cv.imread(templateElement, cv.IMREAD_GRAYSCALE);
@@ -176,11 +178,11 @@ class TestPage extends React.Component {
       maxPoint,
       color,
       point2,
+      char,
     });
     cv.rectangle(srcMat, maxPoint, point2, color, 2, cv.LINE_8, 0);
     // Display the result
-    this.showImage("Recognized Characters", destImg);
-    this.showImage("With rectangle", srcMat);
+    this.showImage("Char: " + char, srcMat);
   }
 
   vectorizeImage(mat) {
