@@ -46,11 +46,17 @@ class TestPage extends React.Component {
       // captcha example: https://i.imgur.com/a02Kkaq.jpg
       imgUrl: "https://i.imgur.com/rEppR08.jpg",
     };
+    this.openCvLoaded = false;
   }
 
-  waitForOpenCvLoaded() {
+  async waitForOpenCvLoaded() {
+    if (this.openCvLoaded) {
+      return Promise.resolve(); // Already loaded, resolve immediately
+    }
+
     return new Promise((resolve) => {
       cv["onRuntimeInitialized"] = () => {
+        this.openCvLoaded = true;
         return resolve();
       };
     });
@@ -62,6 +68,7 @@ class TestPage extends React.Component {
   //
   /////////////////////////////////////////
   async processImage(imgSrc) {
+    await this.waitForOpenCvLoaded();
     const imgSource = cv.imread(imgSrc);
 
     // Convert the image to grayscale
@@ -248,7 +255,7 @@ class TestPage extends React.Component {
         ))}
 
         {imgUrl && (
-          <div className="images-container">
+          <>
             <div className="image-card">
               <div>↓↓↓ The original image ↓↓↓</div>
               <img
@@ -256,18 +263,18 @@ class TestPage extends React.Component {
                 id="original-captcha"
                 src={imgUrl}
                 crossOrigin="anonymous"
-                onLoad={(e) => {
+                onLoad={async (e) => {
                   try {
-                    this.waitForOpenCvLoaded().then(() => {
-                      void this.processImage(e.target);
-                    });
+                    await this.waitForOpenCvLoaded();
+                    void this.processImage(e.target);
                   } catch (error) {
                     console.error(error);
                   }
                 }}
               />
             </div>
-          </div>
+            <div className="images-container"></div>
+          </>
         )}
       </div>
     );
